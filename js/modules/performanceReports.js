@@ -219,6 +219,7 @@ async function addChartsToReport(doc) {
     
     for (const chartId of charts) {
         const chart = document.querySelector(chartId);
+        if (!chart) continue; // Verificação adicional
         const canvas = await html2canvas(chart);
         const imgData = canvas.toDataURL('image/png');
         

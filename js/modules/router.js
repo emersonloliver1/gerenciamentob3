@@ -11,54 +11,24 @@ import { renderAnalysis, initAnalysis } from './analysis.js';
 const routes = {
     '#login': renderLoginForm,
     '#cadastro': renderSignupForm,
-    '#dashboard': () => {
-        if (checkAuth()) {
-            const dashboardContent = renderDashboard();
-            setTimeout(initDashboard, 0);
-            return dashboardContent;
-        } else {
-            window.location.hash = '#login';
-        }
-    },
-    '#cadastro-ativos': () => checkAuth() ? renderAssetRegistration() : window.location.hash = '#login',
-    '#analise': () => {
-        if (checkAuth()) {
-            const content = renderAnalysis();
-            setTimeout(initAnalysis, 0);
-            return content;
-        } else {
-            window.location.hash = '#login';
-        }
-    },
-    '#relatorios': () => {
-        if (checkAuth()) {
-            const content = renderPerformanceReports();
-            setTimeout(initPerformanceReports, 0);
-            return content;
-        } else {
-            window.location.hash = '#login';
-        }
-    },
-    '#configuracoes': () => {
-        if (checkAuth()) {
-            const content = renderSettings();
-            setTimeout(initSettings, 0);
-            return content;
-        } else {
-            window.location.hash = '#login';
-        }
-    },
-    '#risk-config': () => checkAuth() ? renderRiskManagementConfig() : window.location.hash = '#login',
-    '#posicoes': () => {
-        if (checkAuth()) {
-            const content = renderPositions();
-            setTimeout(initPositions, 0);
-            return content;
-        } else {
-            window.location.hash = '#login';
-        }
-    }
+    '#dashboard': () => renderProtectedRoute(renderDashboard, initDashboard),
+    '#cadastro-ativos': () => renderProtectedRoute(renderAssetRegistration),
+    '#analise': () => renderProtectedRoute(renderAnalysis, initAnalysis),
+    '#relatorios': () => renderProtectedRoute(renderPerformanceReports, initPerformanceReports),
+    '#configuracoes': () => renderProtectedRoute(renderSettings, initSettings),
+    '#risk-config': () => renderProtectedRoute(renderRiskManagementConfig),
+    '#posicoes': () => renderProtectedRoute(renderPositions, initPositions)
 };
+
+function renderProtectedRoute(renderFunc, initFunc) {
+    if (checkAuth()) {
+        const content = renderFunc();
+        if (initFunc) setTimeout(initFunc, 0);
+        return content;
+    } else {
+        window.location.hash = '#login';
+    }
+}
 
 let isRouterInitialized = false;
 

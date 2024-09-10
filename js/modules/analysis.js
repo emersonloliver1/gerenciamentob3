@@ -102,7 +102,10 @@ function updatePerformanceSummary(trades) {
     const totalProfit = trades.reduce((sum, trade) => sum + trade.result, 0);
     const avgTradeResult = totalProfit / totalTrades;
 
-    document.getElementById('performanceSummary').innerHTML = `
+    const performanceSummaryElement = document.getElementById('performanceSummary');
+    if (!performanceSummaryElement) return; // Verificação adicional
+
+    performanceSummaryElement.innerHTML = `
         <h3>Resumo de Performance</h3>
         <p>Total de Trades: ${totalTrades}</p>
         <p>Taxa de Acerto: ${winRate.toFixed(2)}%</p>

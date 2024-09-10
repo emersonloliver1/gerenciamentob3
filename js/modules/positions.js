@@ -69,6 +69,7 @@ function deleteTrade(tradeId) {
 
 function updatePositionsTable() {
     const tableBody = document.querySelector('#positionsTable tbody');
+    if (!tableBody) return; // Verificação adicional
     const trades = JSON.parse(localStorage.getItem('trades') || '[]');
     
     tableBody.innerHTML = trades.map(trade => `

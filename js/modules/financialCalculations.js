@@ -1,4 +1,9 @@
 export function calculateVaR(returns, confidenceLevel = 0.95) {
+    if (!returns || returns.length === 0) {
+        console.warn('Nenhum retorno fornecido para cálculo do VaR');
+        return 0;
+    }
+
     const sortedReturns = returns.sort((a, b) => a - b);
     const index = Math.floor((1 - confidenceLevel) * sortedReturns.length);
     return -sortedReturns[index];

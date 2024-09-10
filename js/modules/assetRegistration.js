@@ -91,6 +91,7 @@ function handleImport() {
 
 function updateAssetList() {
     const assetList = document.getElementById('assetList');
+    if (!assetList) return; // Verificação adicional
     const assets = JSON.parse(localStorage.getItem('assets') || '[]');
 
     if (assets.length === 0) {

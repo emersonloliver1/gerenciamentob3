@@ -2,6 +2,7 @@ import { getAssets } from './assetRegistration.js';
 import { getSettings } from './settings.js';
 import { calculateVaR, calculateBeta, calculateSharpeRatio } from './riskIndicators.js';
 import { calculateDailyAndAccumulatedResults, calculateTradeStatistics, calculateMaxStreaks } from './tradeAnalytics.js';
+import { renderCorrelationHeatmap } from './reportCharts.js';
 
 export function renderAnalysis() {
     return `
@@ -43,7 +44,11 @@ export function renderAnalysis() {
                     <div class="chart-container">
                         <canvas id="volatilityChart"></canvas>
                     </div>
+                    <div class="chart-container">
+                        <div id="correlationHeatmap"></div>
+                    </div>
                 </div>
+                <div id="correlationInterpretation"></div>
                 <div class="analysis-recommendations" id="recommendations"></div>
             </div>
         </div>
@@ -53,6 +58,7 @@ export function renderAnalysis() {
 export function initAnalysis() {
     try {
         updateAnalysis();
+        calculateAndDisplayContractCorrelation();
     } catch (error) {
         console.error('Erro ao inicializar análise:', error);
         document.querySelector('.analysis-content').innerHTML = `
@@ -86,7 +92,7 @@ function getFilteredTrades(dateRange) {
 
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - parseInt(dateRange));
+    startDate.getDate() - parseInt(dateRange);
 
     const filteredTrades = allTrades.filter(trade => {
         const tradeDate = new Date(trade.date);
@@ -346,3 +352,86 @@ function addSampleTrades() {
 
 // Add this function to the global scope so it can be called from the HTML
 window.updateAnalysis = updateAnalysis;
+
+function calculateAndDisplayContractCorrelation() {
+    const trades = JSON.parse(localStorage.getItem('trades') || '[]');
+    const contractTypes = ['WIN', 'WDO'];
+    
+    // Agrupa os resultados por data e tipo de contrato
+    const groupedResults = trades.reduce((acc, trade) => {
+        const date = trade.date.split('T')[0];
+        if (!acc[date]) acc[date] = {};
+        if (!acc[date][trade.contractType]) acc[date][trade.contractType] = 0;
+        acc[date][trade.contractType] += trade.result;
+        return acc;
+    }, {});
+
+    // Prepara os dados para cálculo de correlação
+    const data = contractTypes.map(type => 
+        Object.values(groupedResults)
+            .map(day => day[type] || 0)
+    );
+
+    // Calcula a matriz de correlação
+    const correlationMatrix = calculateCorrelationMatrixForContracts(data);
+
+    // Renderiza o heatmap de correlação
+    renderCorrelationHeatmap('correlationHeatmap', correlationMatrix, contractTypes);
+
+    // Exibe a interpretação da correlação
+    displayCorrelationInterpretation(correlationMatrix, contractTypes);
+}
+
+function calculateCorrelationMatrixForContracts(data) {
+    const matrix = [];
+    for (let i = 0; i < data.length; i++) {
+        matrix[i] = [];
+        for (let j = 0; j < data.length; j++) {
+            matrix[i][j] = calculatePearsonCorrelation(data[i], data[j]);
+        }
+    }
+    return matrix;
+}
+
+function calculatePearsonCorrelation(x, y) {
+    const n = x.length;
+    let sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0, sum_y2 = 0;
+    
+    for (let i = 0; i < n; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += x[i] * y[i];
+        sum_x2 += x[i] * x[i];
+        sum_y2 += y[i] * y[i];
+    }
+    
+    const numerator = n * sum_xy - sum_x * sum_y;
+    const denominator = Math.sqrt((n * sum_x2 - sum_x * sum_x) * (n * sum_y2 - sum_y * sum_y));
+    
+    return denominator === 0 ? 0 : numerator / denominator;
+}
+
+function displayCorrelationInterpretation(correlationMatrix, contractTypes) {
+    const interpretationElement = document.getElementById('correlationInterpretation');
+    if (!interpretationElement) return;
+
+    let interpretation = '<h4>Interpretação da Correlação:</h4>';
+    for (let i = 0; i < contractTypes.length; i++) {
+        for (let j = i + 1; j < contractTypes.length; j++) {
+            const correlation = correlationMatrix[i][j];
+            interpretation += `<p>A correlação entre ${contractTypes[i]} e ${contractTypes[j]} é ${correlation.toFixed(2)}. `;
+            if (correlation > 0.7) {
+                interpretation += 'Isso indica uma forte correlação positiva.</p>';
+            } else if (correlation < -0.7) {
+                interpretation += 'Isso indica uma forte correlação negativa.</p>';
+            } else if (correlation > 0.3) {
+                interpretation += 'Isso indica uma correlação positiva moderada.</p>';
+            } else if (correlation < -0.3) {
+                interpretation += 'Isso indica uma correlação negativa moderada.</p>';
+            } else {
+                interpretation += 'Isso indica uma correlação fraca ou inexistente.</p>';
+            }
+        }
+    }
+    interpretationElement.innerHTML = interpretation;
+}

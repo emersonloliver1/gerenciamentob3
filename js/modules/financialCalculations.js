@@ -43,3 +43,22 @@ export function calculateDrawdown(returns) {
 
     return drawdown;
 }
+
+// Mover funções de cálculo para financialCalculations.js
+export function calculateDailyReturns(trades) {
+    return Object.values(trades.reduce((acc, trade) => {
+        const date = trade.date.split('T')[0];
+        acc[date] = (acc[date] || 0) + trade.result;
+        return acc;
+    }, {}));
+}
+
+export function calculateRisk(returns) {
+    const mean = returns.reduce((sum, return_) => sum + return_, 0) / returns.length;
+    const variance = returns.reduce((sum, return_) => sum + Math.pow(return_ - mean, 2), 0) / returns.length;
+    return Math.sqrt(variance);
+}
+
+export function calculateAverageReturn(returns) {
+    return returns.reduce((sum, return_) => sum + return_, 0) / returns.length;
+}

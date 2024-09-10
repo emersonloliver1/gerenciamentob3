@@ -330,3 +330,32 @@ input:focus, select:focus {
 }
 
 /* Adicione estilos específicos para os formulários e elementos dentro de cada seção */
+
+/* Adicionar feedback visual para botões */
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Tornar a interface mais responsiva */
+@media (max-width: 768px) {
+    .dashboard-header {
+        padding: 1rem;
+    }
+
+    .dashboard nav ul {
+        flex-wrap: wrap;
+    }
+
+    .dashboard-content {
+        padding: 1rem;
+    }
+
+    .risk-summary, .trade-statistics {
+        grid-template-columns: 1fr;
+    }
+
+    .charts {
+        grid-template-columns: 1fr;
+    }
+}

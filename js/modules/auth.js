@@ -109,6 +109,7 @@ async function handleSignup() {
         const hashedPassword = await secureHash(password, salt);
         const user = { name, email, password: hashedPassword, salt };
 
+        // Armazenar apenas o hash da senha
         localStorage.setItem(email, JSON.stringify(user));
         alert('Cadastro realizado com sucesso!');
         window.location.hash = '#login';

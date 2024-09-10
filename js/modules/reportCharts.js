@@ -168,3 +168,29 @@ function calculateDrawdown(trades) {
             };
         });
 }
+
+export function renderCorrelationHeatmap(elementId, correlationMatrix, labels) {
+    const options = {
+        series: correlationMatrix.map(row => ({ data: row })),
+        chart: {
+            height: 350,
+            type: 'heatmap',
+        },
+        dataLabels: {
+            enabled: true
+        },
+        colors: ["#008FFB"],
+        title: {
+            text: 'Correlação entre Contratos'
+        },
+        xaxis: {
+            categories: labels
+        },
+        yaxis: {
+            categories: labels
+        }
+    };
+
+    const chart = new ApexCharts(document.querySelector(`#${elementId}`), options);
+    chart.render();
+}

@@ -4,10 +4,10 @@ import { calculateDailyAndAccumulatedResults, calculateTradeStatistics, calculat
 import { handleError } from './errorHandling.js';
 import { setCache, getCache } from './cache.js';
 
-const RISK_LIMIT = getSettings().globalRiskValue;
-const INITIAL_CAPITAL = 1800; // Saldo inicial parametrizado
+const settings = getSettings();
+const RISK_LIMIT = settings.globalRiskValue !== undefined ? settings.globalRiskValue : 0;
+const INITIAL_CAPITAL = settings.initialCapital !== undefined ? settings.initialCapital : 1800;
 
-// Inicialize accumulatedResults como um array vazio
 let accumulatedResults = [];
 
 export function renderDashboard() {
@@ -15,17 +15,8 @@ export function renderDashboard() {
     const monthlyBalance = calculateMonthlyBalance(trades);
     const totalBalance = INITIAL_CAPITAL + monthlyBalance;
     
-    // Calcular indicadores de risco
-    const percentagePL = calculatePercentagePL(trades);
-    const beta = calculateBeta(trades, getMarketReturns());
-
-    // Calcular estatísticas de trades
     const { totalTrades, winRate, profitFactor } = calculateTradeStatistics(trades);
     const { maxWinStreak, maxLossStreak } = calculateMaxStreaks(trades);
-
-    // Calcule os resultados acumulados aqui
-    const { dailyResults, accumulatedResults: newAccumulatedResults } = calculateDailyAndAccumulatedResults(trades);
-    accumulatedResults = newAccumulatedResults; // Atualize a variável global
 
     return `
         <div class="dashboard">
@@ -52,7 +43,7 @@ export function renderDashboard() {
                 <div class="risk-summary">
                     <div class="risk-card">
                         <h3>Saldo Acumulado no Mês</h3>
-                        <p>R$ ${monthlyBalance.toFixed(2)}</p>
+                        <p id="monthlyBalance">R$ ${monthlyBalance.toFixed(2)}</p>
                     </div>
                     <div class="risk-card">
                         <h3>Limite de Risco</h3>
@@ -60,7 +51,7 @@ export function renderDashboard() {
                     </div>
                     <div class="risk-card">
                         <h3>Saldo Total</h3>
-                        <p>R$ ${totalBalance.toFixed(2)}</p>
+                        <p id="totalBalance">R$ ${totalBalance.toFixed(2)}</p>
                     </div>
                     <div class="risk-card">
                         <h3>% L/P sobre capital</h3>
@@ -72,11 +63,11 @@ export function renderDashboard() {
                     </div>
                     <div class="risk-card">
                         <h3>Total de Trades</h3>
-                        <p>${totalTrades}</p>
+                        <p id="totalTrades">${totalTrades}</p>
                     </div>
                     <div class="risk-card">
                         <h3>Taxa de Acerto</h3>
-                        <p>${winRate.toFixed(2)}%</p>
+                        <p id="winRate">${winRate.toFixed(2)}%</p>
                     </div>
                     <div class="risk-card">
                         <h3>Fator de Lucro</h3>
@@ -84,14 +75,14 @@ export function renderDashboard() {
                     </div>
                     <div class="risk-card">
                         <h3>Sequência Máx. de Ganhos</h3>
-                        <p>${maxWinStreak}</p>
+                        <p id="maxWinStreak">${maxWinStreak}</p>
                     </div>
                     <div class="risk-card">
                         <h3>Sequência Máx. de Perdas</h3>
-                        <p>${maxLossStreak}</p>
+                        <p id="maxLossStreak">${maxLossStreak}</p>
                     </div>
                 </div>
-                <div class="risk-alert" style="display: ${monthlyBalance <= -RISK_LIMIT ? 'block' : 'none'};">
+                <div class="risk-alert" id="riskAlert" style="display: none;">
                     Atenção: Limite de risco atingido ou ultrapassado!
                 </div>
                 <div class="quick-trade-form">
@@ -118,23 +109,17 @@ export function renderDashboard() {
 }
 
 export function initDashboard() {
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.addedNodes.length) {
-                const dashboardElement = document.querySelector('.dashboard');
-                if (dashboardElement) {
-                    updateDashboard();
-                    initQuickTradeForm();
-                    initExchangeRateUpdate();
-                    updateDashboardMetrics();
-                    initFixedHeader();
-                    observer.disconnect();
-                }
-            }
-        });
-    });
+    const dashboardContent = renderDashboard();
+    document.getElementById('app').innerHTML = dashboardContent;
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    updateDashboard();
+    initQuickTradeForm();
+    initExchangeRateUpdate();
+    initFixedHeader();
+    checkRiskLimit();
+
+    // Atualiza o dashboard a cada 5 segundos
+    setInterval(updateDashboard, 5000);
 }
 
 function initFixedHeader() {
@@ -148,7 +133,11 @@ function initFixedHeader() {
 
 function initQuickTradeForm() {
     const form = document.getElementById('quickTradeForm');
-    form.addEventListener('submit', handleQuickTrade);
+    if (form) {
+        form.addEventListener('submit', handleQuickTrade);
+    } else {
+        console.error('Formulário de trade rápido não encontrado');
+    }
 }
 
 function handleQuickTrade(event) {
@@ -290,19 +279,32 @@ function getMarketReturns() {
 
 export function updateDashboard() {
     const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-    console.log('Trades carregados:', trades);
+    const monthlyBalance = calculateMonthlyBalance(trades);
+    const totalBalance = INITIAL_CAPITAL + monthlyBalance;
     
+    const { totalTrades, winRate, profitFactor } = calculateTradeStatistics(trades);
+    const { maxWinStreak, maxLossStreak } = calculateMaxStreaks(trades);
+    const percentagePL = calculatePercentagePL(trades);
+    const beta = calculateBeta(trades, getMarketReturns());
+
+    updateElementText('monthlyBalance', `R$ ${monthlyBalance.toFixed(2)}`);
+    updateElementText('totalBalance', `R$ ${totalBalance.toFixed(2)}`);
+    updateElementText('percentagePL', `${percentagePL.toFixed(2)}%`);
+    updateElementText('beta', beta.toFixed(2));
+    updateElementText('totalTrades', totalTrades);
+    updateElementText('winRate', `${winRate.toFixed(2)}%`);
+    updateElementText('profitFactor', profitFactor.toFixed(2));
+    updateElementText('maxWinStreak', maxWinStreak);
+    updateElementText('maxLossStreak', maxLossStreak);
+
     const { dailyResults, accumulatedResults: newAccumulatedResults } = calculateDailyAndAccumulatedResults(trades);
     
-    if (newAccumulatedResults.length === 0) {
-        console.warn('Não há dados de trades para exibir no gráfico.');
-        return;
+    if (newAccumulatedResults.length > 0) {
+        accumulatedResults = newAccumulatedResults;
+        renderCharts();
     }
-    
-    accumulatedResults = newAccumulatedResults;
-    
-    renderCharts();
-    updateDashboardMetrics();
+
+    checkRiskLimit();
 }
 
 function addSampleTrades() {
@@ -314,23 +316,6 @@ function addSampleTrades() {
         { date: '2023-05-05', result: 150 }
     ];
     localStorage.setItem('trades', JSON.stringify(sampleTrades));
-}
-
-// Chame esta função uma vez para adicionar dados de exemplo
-// addSampleTrades();
-
-function updateDashboardMetrics() {
-    const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-    
-    const percentagePL = calculatePercentagePL(trades);
-    const beta = calculateBeta(trades, getMarketReturns());
-    const { profitFactor } = calculateTradeStatistics(trades);
-
-    updateElementText('percentagePL', `${percentagePL.toFixed(2)}%`);
-    updateElementText('beta', beta.toFixed(2));
-    updateElementText('profitFactor', profitFactor.toFixed(2));
-
-    // ... (atualizar outros elementos se necessário)
 }
 
 function updateElementText(id, text) {
@@ -345,4 +330,18 @@ function updateElementText(id, text) {
 function calculatePercentagePL(trades) {
     const currentBalance = INITIAL_CAPITAL + trades.reduce((sum, trade) => sum + trade.result, 0);
     return ((currentBalance - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100;
+}
+
+function checkRiskLimit() {
+    const trades = JSON.parse(localStorage.getItem('trades') || '[]');
+    const monthlyBalance = calculateMonthlyBalance(trades);
+    const riskAlertElement = document.getElementById('riskAlert');
+
+    if (riskAlertElement) {
+        if (monthlyBalance <= -RISK_LIMIT) {
+            riskAlertElement.style.display = 'block';
+        } else {
+            riskAlertElement.style.display = 'none';
+        }
+    }
 }

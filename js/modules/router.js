@@ -7,6 +7,7 @@ import { renderSettings, initSettings } from './settings.js';
 import { renderPositions, initPositions } from './positions.js';
 import { renderPerformanceReports, initPerformanceReports } from './performanceReports.js';
 import { renderAnalysis, initAnalysis } from './analysis.js';
+import { renderMenu } from './menu.js';
 
 const routes = {
     '#login': renderLoginForm,
@@ -24,7 +25,7 @@ function renderProtectedRoute(renderFunc, initFunc) {
     if (checkAuth()) {
         const content = renderFunc();
         if (initFunc) setTimeout(initFunc, 0);
-        return content;
+        return renderMenu() + content;
     } else {
         window.location.hash = '#login';
     }
